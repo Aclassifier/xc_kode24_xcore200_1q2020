@@ -4,6 +4,7 @@
  *  Created on: 12. feb. 2020
  *      Author: teig
  *      Ver 0.50 2020.02.13 Starts workers in 4 sequences and workers simulate random work
+ *      Ver 0.60 2020.02.13 inP_button button added
  */
 
 #include <platform.h> // core
@@ -15,7 +16,10 @@
 #define DEBUG_PRINT_TEST 1
 #define debug_print(fmt, ...) do { if(DEBUG_PRINT_TEST) printf(fmt, __VA_ARGS__); } while (0)
 
-typedef enum {false,true} bool;
+// BOOLEAN #include <stdbool.h> if C99
+// See http://www.teigfam.net/oyvind/home/technology/165-xc-code-examples/#bool
+typedef enum {false,true} bool; // 0,1 This typedef matches any integer-type type like long, int, unsigned, char, bool
+
 typedef signed int time32_t;
 typedef unsigned worked_ms_t; // log.log_worked_ms
 
@@ -46,7 +50,7 @@ void worker_task (server worker_if_t i_worker, const unsigned index_of_server) {
                 doCollectData = true;
                 random_work_delay_ms = random_get_random_number (random_seed) % 100; // [0..99]
                 sim_work_ms = random_work_delay_ms;
-                tmr :> time_ticks; // now
+                tmr :> time_ticks; // Immediately
                 time_ticks += (sim_work_ms * XS1_TIMER_KHZ); // Simulate work
             } break;
             case (doCollectData == true) => tmr when timerafter (time_ticks) :> void : {
@@ -66,40 +70,49 @@ typedef struct log_t {
     unsigned    log_started  [NUM_WORKERS];
     unsigned    log_finished [NUM_WORKERS];
     worked_ms_t log_worked_ms[NUM_WORKERS];
+    bool        button_pressed;
 } log_t;
 
 void print_log (log_t log) {
-    debug_print ("\ncnt %u\n", log.cnt);
+    debug_print ("\ncnt %u %s\n", log.cnt, log.button_pressed ? "BUTTON" : "");
     debug_print ("%s", "log.log_started   ");
     for (unsigned ix=0; ix < NUM_WORKERS; ix++) {
         debug_print ("%2u ", log.log_started[ix]);
     }
-    debug_print ("%s", ":\nlog.log_worked_ms ");
+    debug_print ("%s", "\nlog.log_worked_ms ");
     for (unsigned ix=0; ix < NUM_WORKERS; ix++) {
         debug_print ("%2u ", log.log_worked_ms[ix]);
     }
-    debug_print ("%s", "=\nlog.log_finished  ");
+    debug_print ("%s", "\nlog.log_finished  ");
     for (unsigned ix=0; ix < NUM_WORKERS; ix++) {
         debug_print ("%2u ", log.log_finished[ix]);
     }
-    debug_print ("%s", "#\n");
+    debug_print ("%s", "\n");
 }
+
+#define BUTTON_PRESSED  0
+#define BUTTON_RELEASED 1
+in port inP_button = on tile[0]: XS1_PORT_1M; // J1 P63
+
 
 [[combinable]]
 void client_task (client worker_if_t i_worker[NUM_WORKERS]) {
-    timer     tmr;
-    time32_t    time_ticks; // To 100 in 1 us
-    bool        expect_notification_nums = 0;
-    unsigned    random_seed = random_create_generator_from_seed(1); // xmos
-    //unsigned    random_seed = random_create_generator_from_hw_seed(); // xmos
-    unsigned    random_number;
-    log_t       log;
+    timer    tmr;
+    time32_t time_ticks; // To 100 in 1 us
+    bool     expect_notification_nums = 0;
+    unsigned random_seed = random_create_generator_from_seed(1); // xmos
+    unsigned random_number;
+    log_t    log;
+    bool     allow_button = false;
+    bool     button_current_val = BUTTON_RELEASED;
 
     log.cnt = 0;
+    log.button_pressed = false;
 
     debug_print ("%s", "client_task\n");
+
     tmr :> time_ticks;
-    time_ticks += (1 * XS1_TIMER_HZ); // 1 second
+    time_ticks += (1 * XS1_TIMER_HZ); // 1 second before first timerafter
 
     while (1) {
         select {
@@ -128,7 +141,13 @@ void client_task (client worker_if_t i_worker[NUM_WORKERS]) {
                     print_log (log);
                     // === Process received log.log_worked_ms, or just.. ===
                     tmr :> time_ticks; // ..repeat now
+                    allow_button = (log.cnt >= 10);
                 } else {}
+            } break;
+            case allow_button => inP_button when pinsneq(button_current_val) :> button_current_val: {
+                // I/O pin changed value
+                // Debouncing not done (best done in separate task, with its own timerafter)
+                log.button_pressed = (button_current_val == BUTTON_PRESSED);
             } break;
         }
     }
