@@ -100,7 +100,7 @@ void client_task (client worker_if_t i_worker[NUM_WORKERS]) {
     timer    tmr;
     time32_t time_ticks; // To 100 in 1 us
     bool     expect_notification_nums = 0;
-    unsigned random_seed = random_create_generator_from_seed(1); // xmos
+    unsigned random_seed = random_create_generator_from_seed(1); // xmos. Pseudorandom, so will look the same on each start-up
     unsigned random_number;
     log_t    log;
     bool     allow_button = false;
@@ -140,7 +140,7 @@ void client_task (client worker_if_t i_worker[NUM_WORKERS]) {
                     log.cnt++;
                     print_log (log);
                     // === Process received log.log_worked_ms, or just.. ===
-                    tmr :> time_ticks; // ..repeat now
+                    tmr :> time_ticks; // ..repeat immediately
                     allow_button = (log.cnt >= 10);
                 } else {}
             } break;
