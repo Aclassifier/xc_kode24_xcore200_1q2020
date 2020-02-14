@@ -12,6 +12,210 @@
 
 ==== NEWEST AT THE TOP ====
 
+
+client_task
+worker_task 0
+worker_task 1
+worker_task 2
+worker_task 3
+
+cnt 1
+log.log_started    2  3  0  1
+log.log_worked_ms 92 78 69 59
+log.log_finished   0  1  2  3
+
+cnt 2
+log.log_started    1  2  3  0
+log.log_worked_ms 18 25 77 58
+log.log_finished   2  3  1  0
+
+cnt 3
+log.log_started    3  0  1  2
+log.log_worked_ms 66 15 61 96
+log.log_finished   3  0  2  1
+
+cnt 4
+log.log_started    2  3  0  1
+log.log_worked_ms 56 86 16 30
+log.log_finished   1  0  3  2
+
+cnt 5
+log.log_started    1  2  3  0
+log.log_worked_ms  2 85 73 62
+log.log_finished   1  2  3  0
+
+cnt 6
+log.log_started    0  1  2  3
+log.log_worked_ms  9 92 83 50
+log.log_finished   1  2  3  0
+
+cnt 7
+log.log_started    1  2  3  0
+log.log_worked_ms 55 81 94 12
+log.log_finished   2  1  0  3
+
+cnt 8
+log.log_started    0  1  2  3
+log.log_worked_ms 53 60 30 55
+log.log_finished   1  3  0  2
+
+cnt 9
+log.log_started    0  1  2  3
+log.log_worked_ms 99 72 32  7
+log.log_finished   0  1  2  3
+
+cnt 10
+log.log_started    3  0  1  2
+log.log_worked_ms 97 63 61 23
+log.log_finished   0  1  2  3
+
+cnt 11
+log.log_started    2  3  0  1
+log.log_worked_ms 54 46 78 22
+log.log_finished   2  0  1  3
+
+cnt 12
+log.log_started    1  2  3  0
+log.log_worked_ms 32 85 54 67
+log.log_finished   1  3  2  0
+
+cnt 13
+log.log_started    0  1  2  3
+log.log_worked_ms 15 56 77 42
+log.log_finished   2  1  3  0
+
+cnt 14
+log.log_started    2  3  0  1
+log.log_worked_ms 17 18 38 81
+log.log_finished   3  2  1  0
+
+cnt 15
+log.log_started    3  0  1  2
+log.log_worked_ms 78 39 41 48
+log.log_finished   0  3  2  1
+
+cnt 16
+log.log_started    1  2  3  0
+log.log_worked_ms 39 57 71 77
+log.log_finished   3  2  1  0
+
+cnt 17
+log.log_started    1  2  3  0
+log.log_worked_ms 81 97 84 44
+log.log_finished   1  2  0  3
+
+cnt 18
+log.log_started    2  3  0  1
+log.log_worked_ms 56 58 97 67
+log.log_finished   2  3  1  0
+
+cnt 19
+log.log_started    3  0  1  2
+log.log_worked_ms 74 31 88  9
+log.log_finished   2  0  1  3
+
+cnt 20
+log.log_started    0  1  2  3
+log.log_worked_ms 55 64 93 78
+log.log_finished   2  3  1  0
+
+cnt 21
+log.log_started    3  0  1  2
+log.log_worked_ms 98 51 56 49
+log.log_finished   0  2  1  3
+
+cnt 22
+log.log_started    1  2  3  0
+log.log_worked_ms 92 73 74 19
+log.log_finished   0  2  1  3
+
+cnt 23
+log.log_started    2  3  0  1
+log.log_worked_ms  8 14 77 55
+log.log_finished   2  3  1  0
+
+cnt 24
+log.log_started    0  1  2  3
+log.log_worked_ms 41 72 47 34
+log.log_finished   1  2  0  3
+
+cnt 25
+log.log_started    1  2  3  0
+log.log_worked_ms 32 53 42 19
+log.log_finished   1  2  0  3
+
+cnt 26
+log.log_started    0  1  2  3
+log.log_worked_ms 12 64 29 97
+log.log_finished   3  1  2  0
+
+cnt 27
+log.log_started    3  0  1  2
+log.log_worked_ms 40 31 10 77
+log.log_finished   3  0  1  2
+
+cnt 28
+log.log_started    2  3  0  1
+log.log_worked_ms 34 14 66 26
+log.log_finished   2  0  3  1
+
+cnt 29
+log.log_started    2  3  0  1
+log.log_worked_ms 75 42 44 97
+log.log_finished   3  0  2  1
+
+cnt 30
+log.log_started    2  3  0  1
+log.log_worked_ms 99 86 65 28
+log.log_finished   0  1  2  3
+
+cnt 31
+log.log_started    3  0  1  2
+log.log_worked_ms 16 79 74 29
+log.log_finished   1  2  3  0
+
+cnt 32
+log.log_started    2  3  0  1
+log.log_worked_ms 82 78 82 54
+log.log_finished   0  2  1  3
+
+cnt 33
+log.log_started    1  2  3  0
+log.log_worked_ms 15  9  7 25
+log.log_finished   3  0  1  2
+
+cnt 34
+log.log_started    3  0  1  2
+log.log_worked_ms  6 51 44 13
+log.log_finished   1  2  3  0
+
+cnt 35
+log.log_started    2  3  0  1
+log.log_worked_ms 47  6 85 64
+log.log_finished   2  3  0  1
+
+cnt 36
+log.log_started    2  3  0  1
+log.log_worked_ms  4 74 44 54
+log.log_finished   1  3  2  0
+
+cnt 37
+log.log_started    3  0  1  2
+log.log_worked_ms 54 79 61 44
+log.log_finished   1  2  0  3
+
+cnt 38
+log.log_started    0  1  2  3
+log.log_worked_ms  4  4 16 80
+log.log_finished   3  2  1  0
+
+cnt 39
+log.log_started    3  0  1  2
+log.log_worked_ms 35 83 90 58
+log.log_finished   2  1  3  0
+
+
+
 /*
  * main.xc
  *

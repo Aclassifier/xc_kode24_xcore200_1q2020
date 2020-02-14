@@ -3,8 +3,9 @@
  *
  *  Created on: 12. feb. 2020
  *      Author: teig
+ *      Ver 0.70 2020.02.14 outP4_leds is new
+ *      Ver 0.60 2020.02.13 inP1_button button added
  *      Ver 0.50 2020.02.13 Starts workers in 4 sequences and workers simulate random work
- *      Ver 0.60 2020.02.13 inP_button button added
  */
 
 #include <platform.h> // core
@@ -73,7 +74,7 @@ typedef struct log_t {
     bool        button_pressed;
 } log_t;
 
-void print_log (log_t log) {
+void do_print_log (log_t log) {
     debug_print ("\ncnt %u %s\n", log.cnt, log.button_pressed ? "BUTTON" : "");
     debug_print ("%s", "log.log_started   ");
     for (unsigned ix=0; ix < NUM_WORKERS; ix++) {
@@ -92,19 +93,31 @@ void print_log (log_t log) {
 
 #define BUTTON_PRESSED  0
 #define BUTTON_RELEASED 1
-in port inP_button = on tile[0]: XS1_PORT_1M; // J1 P63
 
+#define BOARD_LEDS_ALL_OFF       0x00
+#define BOARD_LED_GREEN_LED_MASK 0x01
+#define BOARD_LED_GREEN_LED_ON   0x01
+
+void do_toggle_led_green (out buffered port:4 outP4_leds, unsigned &leds) {
+    if ((leds bitand BOARD_LED_GREEN_LED_MASK) == 0) {
+        leds or_eq BOARD_LED_GREEN_LED_ON;
+    } else {
+        leds and_eq (compl BOARD_LED_GREEN_LED_ON);
+    }
+    outP4_leds <: leds;
+}
 
 [[combinable]]
-void client_task (client worker_if_t i_worker[NUM_WORKERS]) {
+void client_task (client worker_if_t i_worker[NUM_WORKERS], in port inP1_button, out buffered port:4 outP4_leds) {
     timer    tmr;
     time32_t time_ticks; // To 100 in 1 us
     bool     expect_notification_nums = 0;
-    unsigned random_seed = random_create_generator_from_seed(1); // xmos. Pseudorandom, so will look the same on each start-up
+    unsigned random_seed = random_create_generator_from_seed(1); // xmos. Pseudorandom, so will look the same on and after each start-up
     unsigned random_number;
     log_t    log;
     bool     allow_button = false;
     bool     button_current_val = BUTTON_RELEASED;
+    unsigned leds = BOARD_LEDS_ALL_OFF;
 
     log.cnt = 0;
     log.button_pressed = false;
@@ -138,20 +151,25 @@ void client_task (client worker_if_t i_worker[NUM_WORKERS]) {
                 log.log_finished[expect_notification_nums] = index_of_server;
                 if (expect_notification_nums == 0) {
                     log.cnt++;
-                    print_log (log);
+                    do_print_log (log);
+                    do_toggle_led_green (outP4_leds, leds);
                     // === Process received log.log_worked_ms, or just.. ===
                     tmr :> time_ticks; // ..repeat immediately
                     allow_button = (log.cnt >= 10);
+
                 } else {}
             } break;
-            case allow_button => inP_button when pinsneq(button_current_val) :> button_current_val: {
+            case allow_button => inP1_button when pinsneq(button_current_val) :> button_current_val: {
                 // I/O pin changed value
                 // Debouncing not done (best done in separate task, with its own timerafter)
-                log.button_pressed = (button_current_val == BUTTON_PRESSED);
+                log.button_pressed = (button_current_val == BUTTON_PRESSED); // May not reach do_print_log
             } break;
         }
     }
 }
+
+in           port   inP1_button = on tile[0]: XS1_PORT_1M; // External HW GPIO J1 P63 (Board's buttons 4E.0 and 4E.1 could have been used, bit want to show 1-bit port)
+out buffered port:4 outP4_leds  = on tile[0]: XS1_PORT_4F; // 4-bit port. xCORE-200 explorerKIT GPIO J1 7
 
 int main() {
     worker_if_t i_worker[NUM_WORKERS];
@@ -160,7 +178,7 @@ int main() {
         par (int ix = 0; ix < NUM_WORKERS; ix++) {
             worker_task (i_worker[ix], ix);
         }
-        client_task (i_worker);
+        client_task (i_worker, inP1_button, outP4_leds);
     }
     return 0;
 }
