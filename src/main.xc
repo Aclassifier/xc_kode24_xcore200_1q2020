@@ -3,6 +3,7 @@
  *
  *  Created on: 12. feb. 2020
  *      Author: teig
+ *      Ver 0.73 2020.02.15 round_cnt_task added, but it cannot be [[distributable]]
  *      Ver 0.72 2020.02.15 Works, before [[distributable]]
  *      Ver 0.70 2020.02.14 outP4_leds is new
  *      Ver 0.60 2020.02.13 inP1_button button added
@@ -148,10 +149,27 @@ void do_swipe_leds (
 
 
 // -----------------------------------------------------------------------------
+// round_cnt_task
+// Task that just outputs an incremented value, showing use of a chan
+// This takes two chanends and one logical core.
+// Plus one timer, for some reason TODO
+// -----------------------------------------------------------------------------
+
+ void round_cnt_task (chanend c_cnt) { // chans are untyped in xC (but interface is typed++)
+    unsigned cnt = 0;
+    while (true) {
+        cnt++;
+        // Synchronous, blocking, no buffer overflow ever possible since there is no buffer:
+        c_cnt <: cnt;
+    }
+}
+
+
+// -----------------------------------------------------------------------------
 // An interface is implemented by chanends, locks, calls or safe patterns set
-// up by the code generation. The particular pattern below enables the compiler
-// to set up that particular asynchronous pattern, based on synchronous, blocking
-// primitives
+// up by the code generation. The particular _transaction_ pattern below enables
+// the compiler to set up that particular asynchronous pattern, based on
+// synchronous, blocking primitives
 // -----------------------------------------------------------------------------
 
 typedef interface worker_if_t {
@@ -219,7 +237,8 @@ void worker_task (
 void client_task (
         client worker_if_t i_worker[NUM_WORKERS],
         in port inP1_button,
-        out buffered port:4 outP4_leds) {
+        out buffered port:4 outP4_leds,
+        chanend c_cnt) {
 
     timer    tmr;
     time32_t time_ticks; // Ticks to 100 in 1 us
@@ -266,7 +285,9 @@ void client_task (
 
                 log.log_finished[expect_notification_nums] = index_of_server;
                 if (expect_notification_nums == 0) {
-                    log.cnt++;
+                    select { // Nested select
+                        case c_cnt :> log.cnt: {} break;
+                    }
                     do_print_log (log, NUM_WORKERS); // Only if DEBUG_PRINT_TEST is 1
                     do_swipe_leds (outP4_leds, led_bits, BOARD_LED_MASK_MAX); // led_bits may be "null"
                     // === Process received log.log_worked_ms, or just.. ===
@@ -293,12 +314,14 @@ void client_task (
 
 int main() {
     worker_if_t i_worker[NUM_WORKERS];
+    chan c_cnt;
     par {
-        [[combine]] // NUM_WORKERS(4) = [cores,timers,chanends]->[2,2,9], if no [[combine]] then ->[5,5,9]
+        [[combine]] // NUM_WORKERS(4) = [cores,timers,chanends]->[3,3,11], if no [[combine]] then ->[6,6,11]
         par (int ix = 0; ix < NUM_WORKERS; ix++) {
             worker_task (i_worker[ix], ix);
         }
-        client_task (i_worker, inP1_button, outP4_leds);
+        client_task (i_worker, inP1_button, outP4_leds, c_cnt);
+        round_cnt_task (c_cnt);
     }
     return 0;
 }
