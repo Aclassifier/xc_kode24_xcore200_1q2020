@@ -3,6 +3,7 @@
  *
  *  Created on: 12. feb. 2020
  *      Author: teig
+ *      Ver 0.74 2020.02.15 https://xcore.com/viewtopic.php?f=26&t=7839
  *      Ver 0.73 2020.02.15 round_cnt_task added, but it cannot be [[distributable]]
  *      Ver 0.72 2020.02.15 Works, before [[distributable]]
  *      Ver 0.70 2020.02.14 outP4_leds is new
@@ -134,7 +135,7 @@ out buffered port:4 outP4_leds = on tile[0]: XS1_PORT_4F; // 4-bit port. xCORE-2
 
 void do_swipe_leds (
         out buffered port:4 outP4_leds,
-        unsigned &?led_bits, // '&' is reference. Aside: pointer types: no decoration (safe), "movable", "alias" and  "unsafe
+        unsigned &?led_bits, // '&' is reference. Aside: pointer types: no decoration (safe), "movable", "alias" and  "unsafe"
         unsigned const board_led_mask_max) {
 
     if (isnull(led_bits)) { // Just to show a nullable type, shown with '?':
@@ -155,12 +156,31 @@ void do_swipe_leds (
 // Plus one timer, for some reason TODO
 // -----------------------------------------------------------------------------
 
- void round_cnt_task (chanend c_cnt) { // chans are untyped in xC (but interface is typed++)
+// TODO if [[distributable]] error: combinable function must end in a `while(1){select{..}}' or combined `par' statement
+void round_cnt_task (chanend c_cnt) { // chans are untyped in xC (but interface is typed++)
     unsigned cnt = 0;
     while (true) {
         cnt++;
         // Synchronous, blocking, no buffer overflow ever possible since there is no buffer:
         c_cnt <: cnt;
+    }
+}
+
+// TODO if [[distributable]] error: select case in a [[distributable]] function which is not on an interface
+void round_cnt_task_2 (chanend c_cnt) { // chans are untyped in xC (but interface is typed++)
+    unsigned cnt = 0;
+    timer       tmr;
+    time32_t    time_ticks; // Ticks to 100 in 1 us
+
+    tmr :> time_ticks;
+    while (true) {
+        select {
+            case tmr when timerafter (time_ticks) :> time_ticks : {
+                cnt++;
+                // Synchronous, blocking, no buffer overflow ever possible since there is no buffer:
+                c_cnt <: cnt;
+            } break;
+        }
     }
 }
 
