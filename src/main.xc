@@ -3,24 +3,24 @@
  *
  *  Created on: 12. feb. 2020
  *      Author: teig
- *      Ver 0.71 2020.02.14 isnull does not seem to work work
+ *      Ver 0.72 2020.02.15 Works, before [[distributable]]
  *      Ver 0.70 2020.02.14 outP4_leds is new
  *      Ver 0.60 2020.02.13 inP1_button button added
  *      Ver 0.50 2020.02.13 Starts workers in 4 sequences and workers simulate random work
  */
 
 #include <platform.h> // core
-#include <stdio.h>
-#include <timer.h> // delay_milliseconds(200), XS1_TIMER_HZ etc
-#include "random.h" // xmos. Also uses "random_conf.h"
-#include <iso646.h>
+#include <stdio.h>    // printf
+#include <timer.h>    // delay_milliseconds(..), XS1_TIMER_HZ etc
+#include "random.h"   // xmos. Also uses "random_conf.h"
+#include <iso646.h>   // readability
 
 // -----------------------------------------------------------------------------
 // Control printing
 // See https://stackoverflow.com/questions/1644868/define-macro-for-debug-printing-in-c
 // -----------------------------------------------------------------------------
 
-#define DEBUG_PRINT_TEST 0 // [0->1] code about [5,12] kB
+#define DEBUG_PRINT_TEST 1 // [0->1] code about [5,12] kB
 #define debug_print(fmt, ...) do { if(DEBUG_PRINT_TEST) printf(fmt, __VA_ARGS__); } while (0)
 
 
@@ -95,28 +95,22 @@ void do_print_log (
 
 
 // -----------------------------------------------------------------------------
-// do_swipe_leds
-// Set LEDs on the xCORE-200 explorerKIT board. There are two, one green only
-// and one RGB (with three lines). High is LED on
+// 1 BIT PORT
+// External button defined (button press pulls a pullup resistor down)
 // -----------------------------------------------------------------------------
 
-void do_swipe_leds (
-        out buffered port:4 outP4_leds,
-        unsigned &?led_bits, // reference
-        unsigned const board_led_mask_max) {
-
-    if (isnull(outP4_leds)) { // Just to show a nullable type:
-        outP4_leds <: 1;
-    } else {
-        outP4_leds <: led_bits; // Output LED bits. CRASH HERE!
-
-        led_bits++;
-        led_bits and_eq board_led_mask_max; // GREEN on and off and 3-coloured RGB LED
-    }
-}
+in port inP1_button = on tile[0]: XS1_PORT_1M; // External HW GPIO J1 P63 (Board's buttons 4E.0 and 4E.1 could have been used, bit want to show 1-bit port)
 
 #define BUTTON_PRESSED  0
 #define BUTTON_RELEASED 1
+
+
+// -----------------------------------------------------------------------------
+// 4 BIT PORT
+// Internal LEDs defined. High is "on"
+// -----------------------------------------------------------------------------
+
+out buffered port:4 outP4_leds = on tile[0]: XS1_PORT_4F; // 4-bit port. xCORE-200 explorerKIT GPIO J1 7
 
 #define BOARD_LEDS_INIT           0x00
 #define BOARD_LED_MASK_GREEN_ONLY 0x01 // BIT0
@@ -130,6 +124,27 @@ void do_swipe_leds (
 #define BOARD_LED_MASK_MAX_4 (BOARD_LED_MASK_RGB_RED   bitor BOARD_LED_MASK_MAX_3)
 
 #define BOARD_LED_MASK_MAX BOARD_LED_MASK_MAX_1
+
+// -----------------------------------------------------------------------------
+// do_swipe_leds
+// Set LEDs on the xCORE-200 explorerKIT board. There are two, one green only
+// and one RGB (with three lines). High is LED on
+// -----------------------------------------------------------------------------
+
+void do_swipe_leds (
+        out buffered port:4 outP4_leds,
+        unsigned &?led_bits, // '&' is reference. Aside: pointer types: no decoration (safe), "movable", "alias" and  "unsafe
+        unsigned const board_led_mask_max) {
+
+    if (isnull(led_bits)) { // Just to show a nullable type, shown with '?':
+        outP4_leds <: BOARD_LED_MASK_GREEN_ONLY;
+    } else {
+        outP4_leds <: led_bits; // Output LED bits.
+
+        led_bits++;
+        led_bits and_eq board_led_mask_max; // GREEN on and off and 3-coloured RGB LED
+    }
+}
 
 
 // -----------------------------------------------------------------------------
@@ -214,8 +229,9 @@ void client_task (
     log_t    log;
     bool     allow_button = false;
     bool     button_current_val = BUTTON_RELEASED;
-    unsigned led_bits = BOARD_LEDS_INIT;
+    unsigned led_bits; // Init below..
 
+    led_bits = BOARD_LEDS_INIT; // ..here to avoid "not used" if "null" used instead
     log.cnt = 0;
     log.button_pressed = false;
 
@@ -252,7 +268,7 @@ void client_task (
                 if (expect_notification_nums == 0) {
                     log.cnt++;
                     do_print_log (log, NUM_WORKERS); // Only if DEBUG_PRINT_TEST is 1
-                    do_swipe_leds (outP4_leds, null, BOARD_LED_MASK_MAX); // led_bits may be "null"
+                    do_swipe_leds (outP4_leds, led_bits, BOARD_LED_MASK_MAX); // led_bits may be "null"
                     // === Process received log.log_worked_ms, or just.. ===
                     tmr :> time_ticks; // ..repeat immediately
                     allow_button = (log.cnt >= 10);
@@ -268,8 +284,6 @@ void client_task (
     }
 }
 
-in           port   inP1_button = on tile[0]: XS1_PORT_1M; // External HW GPIO J1 P63 (Board's buttons 4E.0 and 4E.1 could have been used, bit want to show 1-bit port)
-out buffered port:4 outP4_leds  = on tile[0]: XS1_PORT_4F; // 4-bit port. xCORE-200 explorerKIT GPIO J1 7
 
 
 // -----------------------------------------------------------------------------
