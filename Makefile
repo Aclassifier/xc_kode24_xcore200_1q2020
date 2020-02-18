@@ -6,7 +6,7 @@ TARGET = XCORE-200-EXPLORER
 # The APP_NAME variable determines the name of the final .xe file. It should
 # not include the .xe postfix. If left blank the name will default to
 # the project name
-APP_NAME = xmos_issues_xcore200
+APP_NAME = _kode24_xcore200_1q2020
 
 # The USED_MODULES variable lists other module used by the application.
 USED_MODULES = module_random
@@ -22,7 +22,7 @@ XCC_FLAGS = -O2 -g
 # project to create both xCORE and ARM binaries.
 XCORE_ARM_PROJECT = 0
 
-XCC_MAP_FLAGS = -Xmapper --map -Xmapper _xmos_issues_xcore200.txt -report
+XCC_MAP_FLAGS = -Xmapper --map -Xmapper _kode24_xcore200_1q2020.txt -report
 
 # The VERBOSE variable, if set to 1, enables verbose output from the make system.
 VERBOSE = 0
