@@ -31,14 +31,14 @@
 // See http://www.teigfam.net/oyvind/home/technology/165-xc-code-examples/#bool
 // ---
 
-typedef enum {false,true} bool; // 0,1 This typedef matches any integer-type type like long, int, unsigned, char, bool
+typedef enum {false,true} bool; // 0,1 This typedef matches any integer-type type like long, int, signed, unsigned, char, bool
 
 // ---
 // Define type equal to the width of xC "timer". This processor has 10 HW timers,
 // but the numbers needed in this code will (with NUM_WORKERS 4) be 2 timers if
 // all worker_task run on the same logical core (par [[combine]]) or 5 timers
 // if worker_task each have a logical core for themselves.
-// Both signed and unsigned (always in int) will do, since both will wrap around on
+// Both signed and unsigned (always int) will do, since both will wrap around on
 // "overflow" and the hex code will look the same. This way AFTER is well defined
 // since adding a value will trigger "timerafter" ticks into the future
 // ---
@@ -107,7 +107,7 @@ in port inP1_button = on tile[0]: XS1_PORT_1M; // External HW GPIO J1 P63 (Board
 // Internal LEDs defined. High is "on"
 // ---
 
-out buffered port:4 outP4_leds = on tile[0]: XS1_PORT_4F; // 4-bit port. xCORE-200 explorerKIT GPIO J1 7
+out buffered port:4 outP4_leds = on tile[0]: XS1_PORT_4F; // 4-bit port. xCORE-200 explorerKIT GPIO J1 P5, P3, P1
 
 #define BOARD_LEDS_INIT           0x00
 #define BOARD_LED_MASK_GREEN_ONLY 0x01 // BIT0
@@ -124,7 +124,7 @@ out buffered port:4 outP4_leds = on tile[0]: XS1_PORT_4F; // 4-bit port. xCORE-2
 
 // ---
 // do_swipe_leds
-// Set LEDs on the xCORE-200 explorerKIT board. There are two, one green only
+// Sets LEDs on the xCORE-200 explorerKIT board. There are two, one green only
 // and one RGB (with three lines). High is LED on
 // ---
 
@@ -183,7 +183,7 @@ void round_cnt_task_2 (chanend c_cnt) { // chans are untyped in xC (but interfac
 // An interface is implemented by chanends, locks, calls or safe patterns set
 // up by the code generation. The particular _transaction_ pattern below enables
 // the compiler to set up that particular asynchronous pattern, based on
-// synchronous, blocking primitives
+// synchronous, blocking primitives.
 // ---
 
 typedef interface worker_if_t {
@@ -195,7 +195,7 @@ typedef interface worker_if_t {
 // ---
 // worker_task
 // NUM_WORKERS of these are started. They may share a logical core when
-// par [[combine]] par or run on NUM_WORKERS logical cores if no [[combine]].
+// [[combine]] par or run on NUM_WORKERS logical cores if no [[combine]].
 // The pattern starts with async_work_request and then simulates work for
 // some time, then sends a [[notification]] of finished_work and then the
 // clients responds with get_work_result which [[clears_notification]].
