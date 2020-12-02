@@ -13,7 +13,7 @@
 // think works like this on XCORE-200:
 //
 #define RANDOM_ENABLE_HW_SEED 1
-#define __XS1_L__
+// #define __XS1_L__
 
 #else
     #error Nested include RANDOM_CONF_H_

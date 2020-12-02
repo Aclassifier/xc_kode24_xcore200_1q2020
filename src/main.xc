@@ -1,19 +1,20 @@
-#define CODE 2
+#define CODE 2 // USE TARGET = XCORE-200-EXPLORER BLACK EXTERNAL BUTTON
+// #define   CODE 3 // USE TARGET = XCORE-XA-MODULE
 
+/*
+ * main.xc
+ *
+ *  Created on: 12. feb. 2020
+ *      Author: teig
+ *      Ver 0.75 2020.02.21 in buffered port:1 inP1_button, instead of in port inP1_button,
+ *      Ver 0.74 2020.02.15 https://xcore.com/viewtopic.php?f=26&t=7839
+ *      Ver 0.73 2020.02.15 round_cnt_task added, but it cannot be [[distributable]]
+ *      Ver 0.72 2020.02.15 Works, before [[distributable]]
+ *      Ver 0.70 2020.02.14 outP4_rgb_leds is new
+ *      Ver 0.60 2020.02.13 inP1_button button added
+ *      Ver 0.50 2020.02.13 Starts workers in 4 sequences and workers simulate random work
+ */
 #if (CODE==1)
-    /*
-     * main.xc
-     *
-     *  Created on: 12. feb. 2020
-     *      Author: teig
-     *      Ver 0.75 2020.02.21 in buffered port:1 inP1_button, instead of in port inP1_button,
-     *      Ver 0.74 2020.02.15 https://xcore.com/viewtopic.php?f=26&t=7839
-     *      Ver 0.73 2020.02.15 round_cnt_task added, but it cannot be [[distributable]]
-     *      Ver 0.72 2020.02.15 Works, before [[distributable]]
-     *      Ver 0.70 2020.02.14 outP4_leds is new
-     *      Ver 0.60 2020.02.13 inP1_button button added
-     *      Ver 0.50 2020.02.13 Starts workers in 4 sequences and workers simulate random work
-     */
 
     #include <platform.h> // core
     #include <stdio.h>    // printf
@@ -26,7 +27,7 @@
     // See https://stackoverflow.com/questions/1644868/define-macro-for-debug-printing-in-c
     // ---
 
-    #define DEBUG_PRINT_TEST 0 // [0->1] code about [5,12] kB
+    #define DEBUG_PRINT_TEST 1 // [0->1] code about [5,12] kB
     #define debug_print(fmt, ...) do { if(DEBUG_PRINT_TEST) printf(fmt, __VA_ARGS__); } while (0)
 
     // ---
@@ -113,7 +114,7 @@
     // Internal LEDs defined. High is "on"
     // ---
 
-    out buffered port:4 outP4_leds = on tile[0]: XS1_PORT_4F; // xCORE-200 explorerKIT GPIO J1 P5, P3, P1
+    out buffered port:4 outP4_rgb_leds = on tile[0]: XS1_PORT_4F; // xCORE-200 explorerKIT GPIO J1 P5, P3, P1
 
     #define BOARD_LEDS_INIT           0x00
     #define BOARD_LED_MASK_GREEN_ONLY 0x01 // BIT0
@@ -135,15 +136,15 @@
     // ---
 
     void do_swipe_leds (
-            out buffered port:4 outP4_leds,
+            out buffered port:4 outP4_rgb_leds,
             unsigned &?led_bits, // '&' is reference. Aside: pointer types:
                                  // no decoration (safe), "movable", "alias" and  "unsafe"
             unsigned const board_led_mask_max) {
 
         if (isnull(led_bits)) { // Just to show a nullable type, shown with '?':
-            outP4_leds <: BOARD_LED_MASK_GREEN_ONLY;
+            outP4_rgb_leds <: BOARD_LED_MASK_GREEN_ONLY;
         } else {
-            outP4_leds <: led_bits; // Output LED bits
+            outP4_rgb_leds <: led_bits; // Output LED bits
 
             led_bits++;
             led_bits and_eq board_led_mask_max; // GREEN on and off and 3-coloured RGB LED
@@ -258,7 +259,7 @@
     void client_task (
             client worker_if_t i_worker[NUM_WORKERS],
             in buffered port:1 inP1_button,
-            out buffered port:4 outP4_leds,
+            out buffered port:4 outP4_rgb_leds,
             chanend c_cnt) {
 
         timer    tmr;
@@ -314,7 +315,7 @@
                             case c_cnt :> log.cnt: {} break;
                         }
                         do_print_log (log, NUM_WORKERS); // Only if DEBUG_PRINT_TEST is 1
-                        do_swipe_leds (outP4_leds, led_bits, BOARD_LED_MASK_MAX); // led_bits may be "null"
+                        do_swipe_leds (outP4_rgb_leds, led_bits, BOARD_LED_MASK_MAX); // led_bits may be "null"
                         // === Process received log.log_worked_ms, or just.. ===
                         tmr :> time_ticks; // ..repeat immediately
                         allow_button = (log.cnt >= 10);
@@ -344,13 +345,383 @@
             par (unsigned ix = 0; ix < NUM_WORKERS; ix++) {
                 worker_task (i_worker[ix], ix);
             }
-            client_task (i_worker, inP1_button, outP4_leds, c_cnt);
+            client_task (i_worker, inP1_button, outP4_rgb_leds, c_cnt);
             round_cnt_task (c_cnt);
         }
         return 0;
     }
 
 #elif (CODE==2)
+    /*
+    * _xc_test_4_2020.xc
+    *
+    *  Created on: 9. apr. 2020
+    *      Author: teig
+    */
+
+    #include <platform.h> // core
+    #include <stdio.h>    // printf
+    #include <timer.h>    // delay_milliseconds(..), XS1_TIMER_HZ etc
+    #include <random.h>   // xmos. Also uses "random_conf.h"
+    #include <iso646.h>   // readability
+
+    // ---
+    // Control printing
+    // See https://stackoverflow.com/questions/1644868/define-macro-for-debug-printing-in-c
+    // ---
+
+    #define DEBUG_PRINT_TEST 0 // [0->1] code about [5,12] kB
+    #define debug_print(fmt, ...) do { if(DEBUG_PRINT_TEST) printf(fmt, __VA_ARGS__); } while (0)
+
+    // ---
+    // Define bool
+    // BOOLEAN #include <stdbool.h> if C99
+    // See http://www.teigfam.net/oyvind/home/technology/165-xc-code-examples/#bool
+    // ---
+
+    typedef enum {false,true} bool; // 0,1 This typedef matches any integer-type type like long, int,
+                                    // signed, unsigned, char, bool
+
+    // ---
+    // Define type equal to the width of xC "timer". This processor has 10 HW timers,
+    // but the numbers needed in this code will (with NUM_WORKERS 4) be 2 timers if
+    // all worker_task run on the same logical core (par [[combine]]) or 5 timers
+    // if worker_task each have a logical core for themselves.
+    // Both signed and unsigned (always int) will do, since both will wrap around on
+    // "overflow" and the hex code will look the same. This way AFTER is well defined
+    // since adding a value will trigger "timerafter" ticks into the future
+    // ---
+
+    typedef signed time32_t; // Ticks to 100 in 1 us
+
+    // ---
+    // Define number of workers. Is needed here because variable length arrays
+    // are not permitted to tasks when they are [[combinable]]
+    // ---
+
+    #define NUM_WORKERS 4
+
+    // ---
+    // Define data typedefs
+    // ---
+
+    typedef unsigned worked_ms_t;
+
+    typedef struct log_t {
+        unsigned    cnt;
+        unsigned    log_started  [NUM_WORKERS];
+        unsigned    log_finished [NUM_WORKERS];
+        worked_ms_t log_worked_ms[NUM_WORKERS];
+        bool        button_pressed;
+    } log_t;
+
+    // ---
+    // do_print_log
+    // Prints log if DEBUG_PRINT_TEST is 1. If DEBUG_PRINT_TEST is 0, this function
+    // is not generated by the compiler
+    // ---
+
+    void do_print_log (
+            log_t log,
+            unsigned const num_workers) {
+
+        debug_print ("\ncnt %u %s\n", log.cnt, log.button_pressed ? "BUTTON" : "");
+        debug_print ("%s", "log.log_started   ");
+        for (unsigned ix=0; ix < num_workers; ix++) {
+            debug_print ("%2u ", log.log_started[ix]);
+        }
+        debug_print ("%s", "\nlog.log_worked_ms ");
+        for (unsigned ix=0; ix < num_workers; ix++) {
+            debug_print ("%2u ", log.log_worked_ms[ix]);
+        }
+        debug_print ("%s", "\nlog.log_finished  ");
+        for (unsigned ix=0; ix < num_workers; ix++) {
+            debug_print ("%2u ", log.log_finished[ix]);
+        }
+        debug_print ("%s", "\n");
+    }
+
+
+    // ---
+    // 1 BIT PORT
+    // External button defined (button press pulls a pullup resistor down)
+    // Board's buttons 4E.0 and 4E.1 could have been used, bit want to show 1-bit port
+    // ---
+
+    #define BUTTON_PRESSED  0
+    #define BUTTON_RELEASED 1
+
+    in buffered port:1 inP1_button = on tile[0]: XS1_PORT_1M; // External HW GPIO J1 P63
+
+    // ---
+    // 4 BIT PORT TARGET_XCORE-200-EXPLORER
+    // Internal LEDs defined. High is "on"
+    // ---
+
+    out buffered port:4 outP4_rgb_leds = on tile[0]: XS1_PORT_4F; // xCORE-200 explorerKIT GPIO J1 P5, P3, P1
+
+    #define BOARD_LEDS_INIT           0x00
+    #define BOARD_LED_MASK_GREEN_ONLY 0x01 // BIT0
+    #define BOARD_LED_MASK_RGB_BLUE   0x02 // BIT1
+    #define BOARD_LED_MASK_RGB_GREEN  0x04 // BIT2
+    #define BOARD_LED_MASK_RGB_RED    0x08 // BIT3
+
+    #define BOARD_LED_MASK_MAX_1 (BOARD_LED_MASK_GREEN_ONLY)
+    #define BOARD_LED_MASK_MAX_2 (BOARD_LED_MASK_RGB_BLUE  bitor BOARD_LED_MASK_MAX_1)
+    #define BOARD_LED_MASK_MAX_3 (BOARD_LED_MASK_RGB_GREEN bitor BOARD_LED_MASK_MAX_2)
+    #define BOARD_LED_MASK_MAX_4 (BOARD_LED_MASK_RGB_RED   bitor BOARD_LED_MASK_MAX_3)
+
+    #define BOARD_LED_MASK_MAX BOARD_LED_MASK_MAX_4 // _1, _2, _3 or _4
+
+    // ---
+    // do_swipe_rgb_leds
+    // Sets LEDs on the xCORE-200 explorerKIT board. There are two, one green only
+    // and one RGB (with three lines). High is LED on
+    // ---
+
+    void do_swipe_rgb_leds (
+            out buffered port:4 outP4_rgb_leds,
+            unsigned &?led_bits, // '&' is reference. Aside: pointer types:
+                                 // no decoration (safe), "movable", "alias" and  "unsafe"
+            unsigned const board_led_mask_max) {
+
+        if (isnull(led_bits)) { // Just to show a nullable type, shown with '?':
+            outP4_rgb_leds <: BOARD_LED_MASK_GREEN_ONLY;
+        } else {
+            outP4_rgb_leds <: led_bits; // Output LED bits
+
+            led_bits++;
+            led_bits and_eq board_led_mask_max; // GREEN on and off and 3-coloured RGB LED
+        }
+    }
+
+
+    // ---
+    // round_cnt_task
+    // Task that just outputs an incremented value, showing use of a chan
+    // This takes two chanends and one logical core.
+    // Plus one timer, for some reason TODO
+    // ---
+
+    // if [[distributable]] error message from compiler here
+    void round_cnt_task (chanend c_cnt) { // chans are untyped in xC (but interface is typed++)
+        unsigned cnt = 0;
+        while (true) {
+            cnt++;
+            // Synchronous, blocking, no buffer overflow ever possible since there is no buffer:
+            c_cnt <: cnt;
+        }
+    }
+
+    // if [[distributable]] error message from compiler here
+    // Not used task, but does the same as the task above
+    void round_cnt_task_2 (chanend c_cnt) { // chans are untyped in xC (but interface is typed++)
+        unsigned cnt = 0;
+        timer    tmr;
+        time32_t time_ticks; // Ticks to 100 in 1 us
+
+        tmr :> time_ticks; // Now
+        while (true) {
+            select { // The case passively waits on an event:
+                case tmr when timerafter (time_ticks) :> time_ticks : {
+                    // time_tics always updated, so timerafter is always ready
+                    cnt++;
+                    // Synchronous, blocking, no buffer overflow ever possible since there is no buffer:
+                    c_cnt <: cnt;
+                } break;
+            }
+        }
+    }
+
+    // ---
+    // An interface is implemented by chanends, locks, calls or safe patterns set
+    // up by the code generation. The particular _transaction_ pattern below enables
+    // the compiler to set up that particular asynchronous pattern, based on
+    // synchronous, blocking primitives.
+    // ---
+
+    typedef interface worker_if_t {
+                                void        async_work_request (void);
+        [[notification]] slave  void        finished_work (void);
+        [[clears_notification]] worked_ms_t get_work_result (void);
+    } worker_if_t;
+
+    // ---
+    // worker_task
+    // NUM_WORKERS of these are started. They may share a logical core when
+    // [[combine]] par or run on NUM_WORKERS logical cores if no [[combine]].
+    // The pattern starts with async_work_request and then simulates work for
+    // some time, then sends a [[notification]] of finished_work and then the
+    // clients responds with get_work_result which [[clears_notification]].
+    // The compiler will insert the correct code to allow only that pattern.
+    // ---
+
+    //[[combinable]]
+    void worker_task (
+            server worker_if_t i_worker,
+            const unsigned index_of_server) {
+
+        timer       tmr;
+        time32_t    time_ticks; // Ticks to 100 in 1 us
+        bool        doCollectData = false;
+        worked_ms_t sim_work_ms = 0;
+        unsigned    random_seed = random_create_generator_from_seed(index_of_server); // xmos
+        unsigned    random_work_delay_ms;
+        bool        working = true;
+
+        debug_print ("worker_task %u\n", index_of_server);
+
+        while (working) {
+            select { // Each case passively waits on an event:
+                case i_worker.async_work_request () : {
+                    doCollectData = true;
+                    random_work_delay_ms = random_get_random_number (random_seed) % 100; // [0..99]
+                    sim_work_ms = random_work_delay_ms;
+                    tmr :> time_ticks; // Immediately
+                    time_ticks += (sim_work_ms * XS1_TIMER_KHZ); // Simulate work
+                } break;
+                case (doCollectData == true) => tmr when timerafter (time_ticks) :> void : {
+                    // Now we have simulated that picking up log.log_worked_ms took random_work_delay_ms
+                    doCollectData = false;
+                    i_worker.finished_work();
+                } break;
+                case i_worker.get_work_result (void) -> worked_ms_t worked_ms : {
+                    worked_ms = sim_work_ms;
+                    working = false;
+                } break;
+            }
+        }
+    }
+
+    // ---
+    // client_task
+    // Asks for work from NUM_WORKERS worker_task (service requested
+    // in different sequences) and results from workers, when they arrive, handled.
+    // Each interface call is blocking and synchronous, but the net result of the
+    // pattern is asynchronous worker_task assignments.
+    // Log, a button and LEDs handled.
+    // ---
+
+    [[combinable]]
+    void client_task (
+            client worker_if_t i_worker[NUM_WORKERS],
+            in buffered port:1 inP1_button,
+            out buffered port:4 outP4_rgb_leds,
+            chanend c_cnt) {
+
+        timer    tmr;
+        time32_t time_ticks; // Ticks to 100 in 1 us
+        bool     expect_notification_nums = 0;
+
+        // xmos. Pseudorandom, so will look the same on and after each start-up
+        unsigned random_seed = random_create_generator_from_seed(1);
+
+        unsigned random_number;
+        log_t    log;
+        bool     allow_button = false;
+        bool     button_current_val = BUTTON_RELEASED;
+        unsigned led_bits; // Init below..
+
+        led_bits = BOARD_LEDS_INIT; // ..here to avoid "not used" if "null" used instead
+        log.button_pressed = false;
+
+        debug_print ("%s", "client_task\n");
+
+        tmr :> time_ticks;
+        time_ticks += (1 * XS1_TIMER_HZ); // 1 second before first timerafter
+
+        while (true) {
+            select { // Each case passively waits on an event:
+                case (expect_notification_nums == 0) => tmr when timerafter (time_ticks) :> void : {
+                    random_number = random_get_random_number (random_seed); // Just trying to start randomly
+
+                    // Start as [0,1,2,3], [3,0,1,2], [2,3,0,1], [1,2,3,0]:
+                    for (unsigned ix=0; ix < NUM_WORKERS; ix++) {
+                        unsigned random_worker = random_number % NUM_WORKERS; // Inside [0..(NUM_WORKERS-1)]
+                        i_worker[random_worker].async_work_request();
+                        // Now log.log_started in random sequence
+                        random_number++; // Next (but modulo NUM_WORKERS above)
+
+                        log.log_started[ix] = random_worker;
+                    }
+                    expect_notification_nums = NUM_WORKERS;
+                    // === Do something else while all worker_task work ===
+                } break;
+                case (expect_notification_nums > 0) => i_worker[unsigned index_of_server].finished_work() : {
+
+                    // Server async_work_request entries protected by code and scheduler until this is run:
+                    log.log_worked_ms[index_of_server] = i_worker[index_of_server].get_work_result();
+                    // async_work_request is not allowed again before the above line is run,
+                    // by compiler and code
+
+                    expect_notification_nums--;
+
+                    log.log_finished[expect_notification_nums] = index_of_server;
+                    if (expect_notification_nums == 0) {
+                        select { // Nested select
+                            case c_cnt :> log.cnt: {} break;
+                        }
+                        do_print_log (log, NUM_WORKERS); // Only if DEBUG_PRINT_TEST is 1
+                        do_swipe_rgb_leds (outP4_rgb_leds, led_bits, BOARD_LED_MASK_MAX); // led_bits may be "null"
+                        // === Process received log.log_worked_ms, or just.. ===
+                        tmr :> time_ticks; // ..repeat immediately
+                        allow_button = (log.cnt >= 10);
+                    } else {}
+                } break;
+                case allow_button => inP1_button when pinsneq(button_current_val) :> button_current_val: {
+                    // I/O pin changed value
+                    // Debouncing not done (best done in separate task, with its own timerafter)
+                    log.button_pressed = (button_current_val == BUTTON_PRESSED); // May not reach do_print_log
+                } break;
+            }
+        }
+    }
+
+    void worker_task_scheduler_ (server worker_if_t i_worker[NUM_WORKERS]) { // cores,timers,chanends 6,6,11
+
+        par {
+            while (true) { // Probably mapped on the same core as this:
+                worker_task (i_worker[0], 0);
+            }
+            while (true) {
+                worker_task (i_worker[1], 1);
+            }
+            while (true) {
+                worker_task (i_worker[2], 2);
+            }
+            while (true) {
+                worker_task (i_worker[3], 3);
+            }
+        }
+    }
+
+    void worker_task_scheduler (server worker_if_t i_worker[NUM_WORKERS]) { // cores,timers,chanends 6,6,11
+
+        while (true) {
+            par (unsigned ix = 0; ix < NUM_WORKERS; ix++) {
+                worker_task (i_worker[ix], ix);
+            }
+        }
+    }
+
+    // ---
+    // main
+    // Starts tasks
+    // ---
+
+    int main() {
+        worker_if_t i_worker[NUM_WORKERS];
+        chan c_cnt;
+
+        par {
+            worker_task_scheduler (i_worker);
+            client_task (i_worker, inP1_button, outP4_rgb_leds, c_cnt);
+            round_cnt_task (c_cnt);
+
+        }
+        return 0;
+    }
+#elif (CODE==3)
     /*
     * _xc_test_4_2020.xc
     *
@@ -441,22 +812,30 @@
     }
 
     // ---
-    // 1 BIT PORT
-    // External button defined (button press pulls a pullup resistor down)
-    // Board's buttons 4E.0 and 4E.1 could have been used, bit want to show 1-bit port
+    // 1 BIT PORT TARGET_XCORE-XA-MODULE
     // ---
 
-    in buffered port:1 inP1_button = on tile[0]: XS1_PORT_1M; // External HW GPIO J1 P63
+    // in buffered port:1 inP1_button = on tile[0]: XS1_PORT_1M; // External HW GPIO  J1 P63. XCORE-200-EXPLORER
+    in buffered port:1 inP1_button    = on tile[0]: XS1_PORT_1K; // External xCORE XA J9 P34. XCORE-XA-MODULE EXTERNAL BUTTON1
+    // in buffered port:1 inP1_button = on tile[0]: XS1_PORT_1O; // External xCORE XA J9 P38. XCORE-XA-MODULE EXTERNAL BUTTON2
+    // in buffered port:1 inP1_button = on tile[0]: XS1_PORT_1P; // External xCORE XA J9 P39. XCORE-XA-MODULE EXTERNAL BUTTON3
 
     #define BUTTON_PRESSED  0
     #define BUTTON_RELEASED 1
 
     // ---
-    // 4 BIT PORT
+    // 4 BIT PORT     TARGET_XCORE-XA-MODULE
+    // One internal LED defined. Low is "on"
+    // ---
+
+    out buffered port:1 outP1_d4_led = on tile[0]: XS1_PORT_1F; // xCORE XA J1 D13 XCORE-XA-MODULE LED D4
+
+    // ---
+    // 4 BIT PORT TARGET_XCORE-200-EXPLORER
     // Internal LEDs defined. High is "on"
     // ---
 
-    out buffered port:4 outP4_leds = on tile[0]: XS1_PORT_4F; // xCORE-200 explorerKIT GPIO J1 P5, P3, P1
+    out buffered port:4 outP4_rgb_leds = on tile[0]: XS1_PORT_4F; // xCORE-200 explorerKIT GPIO J1 P5, P3, P1
 
     #define BOARD_LEDS_INIT           0x00
     #define BOARD_LED_MASK_GREEN_ONLY 0x01 // BIT0
@@ -472,24 +851,44 @@
     #define BOARD_LED_MASK_MAX BOARD_LED_MASK_MAX_4 // _1, _2, _3 or _4
 
     // ---
-    // do_swipe_leds
+    // do_swipe_rgb_leds
     // Sets LEDs on the xCORE-200 explorerKIT board. There are two, one green only
     // and one RGB (with three lines). High is LED on
     // ---
 
-    void do_swipe_leds (
-            out buffered port:4 outP4_leds,
+    void do_swipe_rgb_leds (
+            out buffered port:4 outP4_rgb_leds,
             unsigned &?led_bits, // '&' is reference. Aside: pointer types:
                                  // no decoration (safe), "movable", "alias" and  "unsafe"
             unsigned const board_led_mask_max) {
 
         if (isnull(led_bits)) { // Just to show a nullable type, shown with '?':
-            outP4_leds <: BOARD_LED_MASK_GREEN_ONLY;
+            outP4_rgb_leds <: BOARD_LED_MASK_GREEN_ONLY;
         } else {
-            outP4_leds <: led_bits; // Output LED bits
+            outP4_rgb_leds <: led_bits; // Output LED bits
 
             led_bits++;
             led_bits and_eq board_led_mask_max; // GREEN on and off and 3-coloured RGB LED
+        }
+    }
+
+    // ---
+    // do_swipe_d4_led
+    // Sets D4
+    // ---
+
+    void do_swipe_d4_led (
+            out buffered port:1 outP1_d4_led,
+            unsigned &?led_bits, // '&' is reference. Aside: pointer types:
+                                 // no decoration (safe), "movable", "alias" and  "unsafe"
+            unsigned const board_led_mask_max) {
+
+        if (isnull(led_bits)) { // Just to show a nullable type, shown with '?':
+            outP1_d4_led <: BOARD_LED_MASK_GREEN_ONLY;
+        } else {
+            outP1_d4_led <: led_bits; // Output LED bits
+
+            led_bits++;
         }
     }
 
@@ -603,7 +1002,8 @@
     void client_task (
             client worker_if_t i_worker[NUM_WORKERS],
             in buffered port:1 inP1_button,
-            out buffered port:4 outP4_leds,
+            //out buffered port:4 outP4_rgb_leds,
+            out buffered port:1 outP1_d4_led,
             chanend c_cnt) {
 
         timer    tmr;
@@ -659,7 +1059,8 @@
                             case c_cnt :> log.cnt: {} break;
                         }
                         do_print_log (log, NUM_WORKERS); // Only if DEBUG_PRINT_TEST is 1
-                        do_swipe_leds (outP4_leds, led_bits, BOARD_LED_MASK_MAX); // led_bits may be "null"
+                        // do_swipe_rgb_leds (outP4_rgb_leds, led_bits, BOARD_LED_MASK_MAX); // led_bits may be "null"
+                        do_swipe_d4_led (outP1_d4_led, led_bits, BOARD_LED_MASK_MAX); // led_bits may be "null"
                         // === Process received log.log_worked_ms, or just.. ===
                         tmr :> time_ticks; // ..repeat immediately
                         allow_button = (log.cnt >= 10);
@@ -712,11 +1113,14 @@
 
         par {
             worker_task_scheduler (i_worker);
-            client_task (i_worker, inP1_button, outP4_leds, c_cnt);
+            // client_task (i_worker, inP1_button, outP4_rgb_leds, c_cnt);
+            client_task (i_worker, inP1_button, outP1_d4_led, c_cnt);
+
             round_cnt_task (c_cnt);
 
         }
         return 0;
     }
+
 
 #endif
