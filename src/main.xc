@@ -6,6 +6,7 @@
  *
  *  Created on: 12. feb. 2020
  *      Author: teig
+ *      Ver 0.75 2025.05.12 Gettin the code ready on GitHub
  *      Ver 0.75 2020.02.21 in buffered port:1 inP1_button, instead of in port inP1_button,
  *      Ver 0.74 2020.02.15 https://xcore.com/viewtopic.php?f=26&t=7839
  *      Ver 0.73 2020.02.15 round_cnt_task added, but it cannot be [[distributable]]
@@ -370,7 +371,7 @@
     // See https://stackoverflow.com/questions/1644868/define-macro-for-debug-printing-in-c
     // ---
 
-    #define DEBUG_PRINT_TEST 0 // [0->1] code about [5,12] kB
+    #define DEBUG_PRINT_TEST 1 // [0->1] code about [5,12] kB
     #define debug_print(fmt, ...) do { if(DEBUG_PRINT_TEST) printf(fmt, __VA_ARGS__); } while (0)
 
     // ---
@@ -835,7 +836,7 @@
     // Internal LEDs defined. High is "on"
     // ---
 
-    out buffered port:4 outP4_rgb_leds = on tile[0]: XS1_PORT_4F; // xCORE-200 explorerKIT GPIO J1 P5, P3, P1
+    out buffered port:4 outP4_rgb_leds = on tile[0]: XS1_PORT_4F; // xCORE-200 explorerKIT GPIO J1 P5, P3, P1.
 
     #define BOARD_LEDS_INIT           0x00
     #define BOARD_LED_MASK_GREEN_ONLY 0x01 // BIT0
